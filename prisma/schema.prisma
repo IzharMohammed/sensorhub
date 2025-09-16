@@ -13,3 +13,106 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Device {
+  id        String    @id @default(cuid())
+  deviceId  String    @unique
+  name      String?
+  isActive  Boolean   @default(true)
+  lastSeen  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  telemetryPings TelemetryPing[]
+  subscriptions  Subscription[]
+
+  @@map("devices")
+}
+
+model TelemetryPing {
+  id        String   @id @default(cuid())
+  eventId   String   @unique // For idempotency
+  deviceId  String
+  metric    String
+  value     Float
+  status    String
+  ts        DateTime
+  createdAt DateTime @default(now())
+
+  // Relations
+  device Device @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+
+  @@index([deviceId, ts])
+  @@map("telemetry_pings")
+}
+
+model Subscription {
+  id          String             @id @default(cuid())
+  deviceId    String
+  planId      String
+  status      SubscriptionStatus @default(PENDING)
+  startDate   DateTime
+  endDate     DateTime
+  providerRef String? // Reference from payment provider
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  // Relations
+  device Device @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+
+  @@index([deviceId, status])
+  @@index([endDate]) // For expiry checks
+  @@map("subscriptions")
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  clientId  String   @unique
+  apiKey    String   @unique
+  name      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  relayLogs RelayLog[]
+
+  @@map("clients")
+}
+
+model RelayLog {
+  id             String      @id @default(cuid())
+  clientId       String
+  idempotencyKey String      @unique
+  message        String
+  meta           Json?
+  status         RelayStatus @default(PENDING)
+  attempts       Int         @default(0)
+  lastError      String?
+  nextRetryAt    DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+
+  @@index([status, nextRetryAt])
+  @@index([clientId])
+  @@map("relay_logs")
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  FAILED
+}
+
+enum RelayStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
