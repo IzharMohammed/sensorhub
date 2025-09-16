@@ -1,0 +1,53 @@
+
+import { PrismaClient } from '@prisma/client';
+import { logger } from './logger';
+
+declare global {
+    var __prisma: PrismaClient | undefined;
+}
+
+export const prisma =
+    globalThis.__prisma ||
+    new PrismaClient({
+        log: [
+            { level: 'query', emit: 'event' },
+            { level: 'error', emit: 'stdout' },
+            { level: 'info', emit: 'stdout' },
+            { level: 'warn', emit: 'stdout' },
+        ],
+    });
+
+if (process.env.NODE_ENV !== 'production') {
+    globalThis.__prisma = prisma;
+}
+
+// Log slow queries in development
+// if (process.env.NODE_ENV === 'development') {
+//     prisma.$on('query', (e) => {
+//         if (e.duration > 500) {
+//             logger.warn(
+//                 {
+//                     query: e.query,
+//                     params: e.params,
+//                     duration: e.duration,
+//                 },
+//                 'Slow query detected'
+//             );
+//         }
+//     });
+// }
+
+export async function connectDatabase() {
+    try {
+        await prisma.$connect();
+        logger.info('Database connected successfully');
+    } catch (error) {
+        logger.error(error, 'Failed to connect to database');
+        process.exit(1);
+    }
+}
+
+export async function disconnectDatabase() {
+    await prisma.$disconnect();
+    logger.info('Database disconnected');
+}
