@@ -1,4 +1,5 @@
 import Fastify, { FastifyInstance } from 'fastify'
+import { telemetryRoutes } from './modules/telemetry/telemetry.route'
 
 const server: FastifyInstance = Fastify({
     logger: true
@@ -9,6 +10,7 @@ server.get("/healthcheck", async function () {
 })
 
 async function main() {
+    server.register(telemetryRoutes, { prefix: "api/telemetry" })
     try {
         // await server.listen(3000, "0.0.0.0");
         await server.listen({ port: 3000, host: "0.0.0.0" })
