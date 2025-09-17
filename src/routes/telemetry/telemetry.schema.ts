@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { buildJsonSchemas } from "fastify-zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
-// Define base input schema as a ZodObject
-const telemetryPingInputSchema = z.object({
+// Zod schemas
+export const telemetryPingInputSchema = z.object({
     deviceId: z.string().min(1, "Device ID is required"),
     eventId: z.string().min(1, "Event ID is required for idempotency"),
     metric: z.string().min(1, "Metric is required"),
@@ -11,20 +11,15 @@ const telemetryPingInputSchema = z.object({
     ts: z.string().datetime("Invalid timestamp format"),
 });
 
-// Define generated fields schema
-const telemetryPingGeneratedSchema = z.object({
+export const telemetryPingGeneratedSchema = z.object({
     id: z.string(),
     createdAt: z.string(),
 });
 
-// Full create schema (same as input)
-const createTelemetryPingSchema = telemetryPingInputSchema;
+export const createTelemetryPingSchema = telemetryPingInputSchema;
+export const telemetryPingResponseSchema = telemetryPingInputSchema.merge(telemetryPingGeneratedSchema);
 
-// Response includes both input and generated fields
-const telemetryPingResponseSchema = telemetryPingInputSchema.merge(telemetryPingGeneratedSchema);
-
-// Device status schema
-const deviceStatusSchema = z.object({
+export const deviceStatusSchema = z.object({
     deviceId: z.string(),
     isActive: z.boolean(),
     lastSeenAt: z.string().nullable(),
@@ -36,24 +31,21 @@ const deviceStatusSchema = z.object({
     })),
 });
 
-const deviceStatusResponseSchema = z.array(deviceStatusSchema);
+export const deviceStatusResponseSchema = z.array(deviceStatusSchema);
 
-// Error schema
-const errorResponseSchema = z.object({
+export const errorResponseSchema = z.object({
     error: z.string(),
     message: z.string(),
     requestId: z.string(),
 });
 
-// Type export
+// Zod inferred types
 export type CreateTelemetryPingInput = z.infer<typeof createTelemetryPingSchema>;
 
-const models = {
-    createTelemetryPingSchema,
-    telemetryPingResponseSchema,
-    deviceStatusResponseSchema,
-    errorResponseSchema,
-}
-
-//@ts-expect-error
-export const { schemas: telemetrySchemas, $ref } = buildJsonSchemas({ models });
+// JSON Schema exports
+export const schemas = {
+    createTelemetryPingSchema: zodToJsonSchema(createTelemetryPingSchema, "createTelemetryPingSchema"),
+    telemetryPingResponseSchema: zodToJsonSchema(telemetryPingResponseSchema, "telemetryPingResponseSchema"),
+    deviceStatusResponseSchema: zodToJsonSchema(deviceStatusResponseSchema, "deviceStatusResponseSchema"),
+    errorResponseSchema: zodToJsonSchema(errorResponseSchema, "errorResponseSchema"),
+};

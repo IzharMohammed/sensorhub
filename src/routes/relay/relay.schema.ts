@@ -1,12 +1,14 @@
 import { z } from "zod";
-import { buildJsonSchemas } from "fastify-zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
+// Input schema
 const relayPublishInput = {
     clientId: z.string().min(1, "Client ID is required"),
     message: z.string().min(1, "Message is required"),
     meta: z.record(z.any(), z.any()).optional(),
 };
 
+// Auto-generated fields
 const relayLogGenerated = {
     id: z.string(),
     idempotencyKey: z.string(),
@@ -19,30 +21,28 @@ const relayLogGenerated = {
     updatedAt: z.string(),
 };
 
-const createRelayPublishSchema = z.object({
+// Zod schemas
+export const createRelayPublishSchema = z.object({
     ...relayPublishInput,
 });
 
-const relayPublishResponseSchema = z.object({
+export const relayPublishResponseSchema = z.object({
     ...relayPublishInput,
     ...relayLogGenerated,
 });
 
-const errorResponseSchema = z.object({
+export const errorResponseSchema = z.object({
     error: z.string(),
     message: z.string(),
     requestId: z.string(),
 });
 
+// Type exports
 export type CreateRelayPublishInput = z.infer<typeof createRelayPublishSchema>;
 
-const models = {
-    createRelayPublishSchema,
-    relayPublishResponseSchema,
-    errorResponseSchema,
-}
-
-//@ts-expect-error
-export const { schemas: relaySchemas, $ref } = buildJsonSchemas({ models }, {
-    $id: "relay",
-});
+// JSON schemas
+export const schemas = {
+    createRelayPublishSchema: zodToJsonSchema(createRelayPublishSchema, "createRelayPublishSchema"),
+    relayPublishResponseSchema: zodToJsonSchema(relayPublishResponseSchema, "relayPublishResponseSchema"),
+    errorResponseSchema: zodToJsonSchema(errorResponseSchema, "errorResponseSchema"),
+};

@@ -1,7 +1,7 @@
 import { FastifyInstance } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import { publishRelayMessageHandler } from "./relay.controller";
-import { $ref } from "./relay.schema";
+import { schemas } from "./relay.schema";
 import { config } from "../../utils/config";
 
 async function relayRoutes(server: FastifyInstance) {
@@ -10,7 +10,6 @@ async function relayRoutes(server: FastifyInstance) {
         max: config.relayRateLimit,
         timeWindow: "1 minute",
         keyGenerator: (request) => {
-            // Rate limit per client for relay
             const apiKey = request.headers["x-api-key"] as string;
             return `relay:${apiKey || request.ip}`;
         },
@@ -28,13 +27,13 @@ async function relayRoutes(server: FastifyInstance) {
         "/publish",
         {
             schema: {
-                body: $ref("createRelayPublishSchema"),
+                body: schemas.createRelayPublishSchema,
                 response: {
-                    201: $ref("relayPublishResponseSchema"),
-                    200: $ref("relayPublishResponseSchema"), // For idempotent responses
-                    401: $ref("errorResponseSchema"),
-                    403: $ref("errorResponseSchema"),
-                    429: $ref("errorResponseSchema"),
+                    201: schemas.relayPublishResponseSchema,
+                    200: schemas.relayPublishResponseSchema,
+                    401: schemas.errorResponseSchema,
+                    403: schemas.errorResponseSchema,
+                    429: schemas.errorResponseSchema,
                 },
             },
         },

@@ -1,18 +1,18 @@
+// billing.routes.ts
 import { FastifyInstance } from "fastify";
 import { createSubscriptionHandler } from "./billing.controller";
-import { $ref } from "./billing.schema";
+import { schemas } from "./billing.schema";
 
 async function billingRoutes(server: FastifyInstance) {
-    // POST /billing/subscribe
     server.post(
         "/subscribe",
         {
             schema: {
-                body: $ref("createSubscriptionSchema"),
+                body: schemas.createSubscriptionSchema,
                 response: {
-                    201: $ref("subscriptionResponseSchema"),
-                    402: $ref("errorResponseSchema"),
-                    502: $ref("errorResponseSchema"),
+                    201: schemas.subscriptionResponseSchema,
+                    402: schemas.errorResponseSchema,
+                    502: schemas.errorResponseSchema,
                 },
             },
         },

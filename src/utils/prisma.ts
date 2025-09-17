@@ -21,22 +21,6 @@ if (process.env.NODE_ENV !== 'production') {
     globalThis.__prisma = prisma;
 }
 
-// Log slow queries in development
-// if (process.env.NODE_ENV === 'development') {
-//     prisma.$on('query', (e) => {
-//         if (e.duration > 500) {
-//             logger.warn(
-//                 {
-//                     query: e.query,
-//                     params: e.params,
-//                     duration: e.duration,
-//                 },
-//                 'Slow query detected'
-//             );
-//         }
-//     });
-// }
-
 export async function connectDatabase() {
     try {
         await prisma.$connect();

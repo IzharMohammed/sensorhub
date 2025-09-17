@@ -1,11 +1,14 @@
+// billing.schema.ts
 import { z } from "zod";
-import { buildJsonSchemas } from "fastify-zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
+// Input fields
 const subscriptionInput = {
     deviceId: z.string().min(1, "Device ID is required"),
     planId: z.string().min(1, "Plan ID is required"),
 };
 
+// Auto-generated fields
 const subscriptionGenerated = {
     id: z.string(),
     status: z.enum(["PENDING", "ACTIVE", "EXPIRED", "CANCELLED"]),
@@ -16,30 +19,28 @@ const subscriptionGenerated = {
     updatedAt: z.string(),
 };
 
-const createSubscriptionSchema = z.object({
+// Zod schemas
+export const createSubscriptionSchema = z.object({
     ...subscriptionInput,
 });
 
-const subscriptionResponseSchema = z.object({
+export const subscriptionResponseSchema = z.object({
     ...subscriptionInput,
     ...subscriptionGenerated,
 });
 
-const errorResponseSchema = z.object({
+export const errorResponseSchema = z.object({
     error: z.string(),
     message: z.string(),
     requestId: z.string(),
 });
 
+// Inferred type
 export type CreateSubscriptionInput = z.infer<typeof createSubscriptionSchema>;
 
-const models = {
-    createSubscriptionSchema,
-    subscriptionResponseSchema,
-    errorResponseSchema,
-}
-
-//@ts-expect-error
-export const { schemas: billingSchemas, $ref } = buildJsonSchemas({ models }, {
-    $id: "billing",
-});
+// JSON Schemas
+export const schemas = {
+    createSubscriptionSchema: zodToJsonSchema(createSubscriptionSchema, "createSubscriptionSchema"),
+    subscriptionResponseSchema: zodToJsonSchema(subscriptionResponseSchema, "subscriptionResponseSchema"),
+    errorResponseSchema: zodToJsonSchema(errorResponseSchema, "errorResponseSchema"),
+};

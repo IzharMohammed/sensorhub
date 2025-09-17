@@ -3,10 +3,11 @@ import { config } from "./utils/config";
 import { setupPlugins } from "./utils/plugins";
 import { setupRoutes } from "./routes";
 import { logger } from "./utils/logger";
+import { loggerConfig } from "./utils/logger-config";
 
 async function buildServer() {
     const server = Fastify({
-        logger: logger,
+        logger: loggerConfig,
         genReqId: () => {
             return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         },
@@ -63,8 +64,6 @@ process.on("SIGTERM", async () => {
     process.exit(0);
 });
 
-if (require.main === module) {
-    start();
-}
+start();
 
 export { buildServer };
