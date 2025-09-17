@@ -2,6 +2,7 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateTelemetryPingInput } from "./telemetry.schema";
 import {
     createTelemetryPing,
+    getDevicesStatus,
     getTelemetryPingByEventId,
     isDeviceActive,
 } from "./telemetry.service";
@@ -51,6 +52,24 @@ export async function createTelemetryPingHandler(
         });
     } catch (error) {
         request.log.error(error, "Failed to create telemetry ping");
+        throw error;
+    }
+}
+
+export async function getDevicesStatusHandler(
+    request: FastifyRequest,
+    reply: FastifyReply
+) {
+    request.log.info("Fetching devices status");
+
+    try {
+        const devicesStatus = await getDevicesStatus();
+
+        request.log.info({ count: devicesStatus.length }, "Devices status retrieved");
+
+        return reply.code(200).send(devicesStatus);
+    } catch (error) {
+        request.log.error(error, "Failed to fetch devices status");
         throw error;
     }
 }
