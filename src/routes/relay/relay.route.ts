@@ -17,7 +17,7 @@ async function relayRoutes(server: FastifyInstance) {
         errorResponseBuilder: (request, context) => {
             return {
                 error: "Relay Rate Limit Exceeded",
-                message: `Too many relay requests. Limit: ${context.max} per client per ${context.timeWindow}`,
+                message: `Too many relay requests. Limit: ${context.max}`,
                 requestId: request.id,
             };
         },
