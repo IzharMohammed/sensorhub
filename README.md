@@ -5,6 +5,7 @@ A production-ready backend service that demonstrates device telemetry ingestion,
 ## 🏗️ Architecture Overview
 
 This service implements:
+
 - **Device Telemetry System**: Ingests sensor data from IoT devices
 - **Subscription Management**: Handles yearly subscriptions with payment processing
 - **Message Relay System**: Forwards notifications to external providers with retry logic
@@ -35,7 +36,7 @@ This service implements:
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 14+
 - Redis 6+
 - pnpm
@@ -79,36 +80,24 @@ pnpm db:seed
 ### 4. Start Services
 
 **Development Mode:**
+
 ```bash
 pnpm run dev
 ```
 
 The server will start on `http://localhost:3000`
 
-## 🧪 Testing
-
-### Run Tests
-
-```bash
-# Run all tests
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Run specific test file
-npm test -- telemetry.test.ts
-```
-
 ### Key Test Scenarios
 
 The test suite covers:
 
 1. **Idempotency Tests**
+
    - Duplicate telemetry pings return same result
    - Relay messages with same idempotency key
 
-2. **Retry Logic Tests**  
+2. **Retry Logic Tests**
+
    - Failed relay messages are retried with exponential backoff
    - Max retry attempts are respected
 
@@ -119,55 +108,129 @@ The test suite covers:
 ## 📡 API Endpoints
 
 ### Health Checks
+
 - `GET /health` - Basic health check
 - `GET /ready` - Readiness probe (checks DB/Redis)
 
 ### Telemetry
+
 - `POST /telemetry/ping` - Submit device telemetry
 - `GET /telemetry/devices/status` - Get all device statuses
 
-### Billing  
+### Billing
+
 - `POST /billing/subscribe` - Subscribe device to yearly plan
 
 ### Relay
+
 - `POST /relay/publish` - Publish message to external provider
 
 ### Mock Providers (for testing)
+
 - `POST /mock-pay/charge` - Mock payment processor
 - `POST /mock-relay/receive` - Mock relay receiver
 
 ## 🔧 API Usage Examples
 
-### 1. Subscribe a Device
+## Test these curl commands only after seeding the data as the examples here are related to data which is seeded
+
+## 1. Health & Ready Checks
+
+### GET Health Check
 
 ```bash
-curl -X POST http://localhost:3000/billing/subscribe \
+curl -X GET http://127.0.0.1:3000/health
+```
+
+### GET Ready Check
+
+```bash
+curl -X GET http://127.0.0.1:3000/ready
+```
+
+## 2. Telemetry Endpoints
+
+### POST Create Telemetry Ping (will fail - device inactive)
+
+```bash
+curl -X POST http://127.0.0.1:3000/telemetry/ping \
   -H "Content-Type: application/json" \
   -d '{
-    "deviceId": "sensor-001",
+    "deviceId": "device_test_1",
+    "eventId": "evt-1001",
+    "metric": "temperature",
+    "value": 27.5,
+    "status": "ok",
+    "ts": "2025-09-17T12:34:56.000Z"
+  }'
+```
+
+### POST Create Telemetry Ping (will succeed - device active)
+
+```bash
+curl -X POST http://127.0.0.1:3000/telemetry/ping \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deviceId": "device_test_3",
+    "eventId": "evt-1002",
+    "metric": "temperature",
+    "value": 25.0,
+    "status": "ok",
+    "ts": "2025-09-17T12:35:00.000Z"
+  }'
+```
+
+### POST Test Idempotency (same eventId - should return existing)
+
+```bash
+curl -X POST http://127.0.0.1:3000/telemetry/ping \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deviceId": "device_test_3",
+    "eventId": "evt-1002",
+    "metric": "temperature",
+    "value": 25.0,
+    "status": "ok",
+    "ts": "2025-09-17T12:35:00.000Z"
+  }'
+```
+
+### GET Devices Status
+
+```bash
+curl -X GET http://127.0.0.1:3000/telemetry/devices/status
+```
+
+## 3. Billing Endpoints
+
+### POST Subscribe Device (payment might fail randomly)
+
+```bash
+curl -X POST http://127.0.0.1:3000/billing/subscribe \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deviceId": "device_test_1",
     "planId": "basic"
   }'
 ```
 
-### 2. Send Telemetry Data
+### POST Subscribe Another Device
 
 ```bash
-curl -X POST http://localhost:3000/telemetry/ping \
+curl -X POST http://127.0.0.1:3000/billing/subscribe \
   -H "Content-Type: application/json" \
   -d '{
-    "deviceId": "sensor-001",
-    "eventId": "evt-12345",
-    "metric": "temperature", 
-    "value": 23.5,
-    "status": "ok",
-    "ts": "2025-01-15T10:30:00.000Z"
+    "deviceId": "device_test_2",
+    "planId": "premium"
   }'
 ```
 
-### 3. Publish Relay Message
+## 4. Relay Endpoints
+
+### POST Publish Relay Message
 
 ```bash
-curl -X POST http://localhost:3000/relay/publish \
+curl -X POST http://127.0.0.1:3000/relay/publish \
   -H "Content-Type: application/json" \
   -H "x-api-key: test_key_12345" \
   -d '{
@@ -175,204 +238,125 @@ curl -X POST http://localhost:3000/relay/publish \
     "message": "Device alert: Temperature threshold exceeded",
     "meta": {
       "type": "alert",
-      "priority": "high"
+      "priority": "high",
+      "deviceId": "device_test_3"
     }
   }'
 ```
 
-## 📋 Postman Collection
+### POST Test Relay Idempotency
 
-### Import this collection into Postman:
-
-```json
-{
-  "info": {
-    "name": "SensorHub API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "item": [
-    {
-      "name": "Health Check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
-        }
-      }
-    },
-    {
-      "name": "Subscribe Device",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"deviceId\": \"device_test_1\",\n  \"planId\": \"basic\"\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/billing/subscribe",
-          "host": ["{{base_url}}"],
-          "path": ["billing", "subscribe"]
-        }
-      }
-    },
-    {
-      "name": "Send Telemetry",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"deviceId\": \"device_test_3\",\n  \"eventId\": \"evt-{{$randomInt}}\",\n  \"metric\": \"temperature\",\n  \"value\": {{$randomInt}},\n  \"status\": \"ok\",\n  \"ts\": \"{{$isoTimestamp}}\"\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/telemetry/ping",
-          "host": ["{{base_url}}"],
-          "path": ["telemetry", "ping"]
-        }
-      }
-    },
-    {
-      "name": "Publish Relay Message",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "x-api-key",
-            "value": "test_key_12345"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"clientId\": \"client_test_1\",\n  \"message\": \"Test alert message\",\n  \"meta\": {\n    \"type\": \"alert\",\n    \"priority\": \"high\"\n  }\n}"
-        },
-        "url": {
-          "raw": "{{base_url}}/relay/publish",
-          "host": ["{{base_url}}"],
-          "path": ["relay", "publish"]
-        }
-      }
-    },
-    {
-      "name": "Get Device Status",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/telemetry/devices/status",
-          "host": ["{{base_url}}"],
-          "path": ["telemetry", "devices", "status"]
-        }
-      }
-    }
-  ],
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:3000"
-    }
-  ]
-}
-```
-
-## 🧪 Test Scenarios
-
-### 1. Idempotency Testing
-
-**Test duplicate telemetry pings:**
 ```bash
-# Send same request twice
-curl -X POST http://localhost:3000/telemetry/ping \
-  -H "Content-Type: application/json" \
-  -d '{"deviceId": "device_test_3", "eventId": "duplicate-test", "metric": "temperature", "value": 25, "status": "ok", "ts": "2025-01-15T10:30:00.000Z"}'
-
-# Second request should return 200 with same ID
-curl -X POST http://localhost:3000/telemetry/ping \
-  -H "Content-Type: application/json" \
-  -d '{"deviceId": "device_test_3", "eventId": "duplicate-test", "metric": "temperature", "value": 25, "status": "ok", "ts": "2025-01-15T10:30:00.000Z"}'
-```
-
-### 2. Retry Logic Testing
-
-**Test relay retries:**
-```bash
-# Send relay message (might fail and retry)
-curl -X POST http://localhost:3000/relay/publish \
+curl -X POST http://127.0.0.1:3000/relay/publish \
   -H "Content-Type: application/json" \
   -H "x-api-key: test_key_12345" \
-  -d '{"clientId": "client_test_1", "message": "Retry test message", "meta": {"test": true}}'
+  -H "x-idempotency-key: custom-key-123" \
+  -d '{
+    "clientId": "client_test_1",
+    "message": "Test idempotency message",
+    "meta": {
+      "test": true
+    }
+  }'
 ```
 
-Check logs to see retry attempts with exponential backoff.
+### POST Test Unauthorized (no API key)
 
-### 3. Subscription Expiry Testing
-
-Run the test suite to see expired subscription handling:
 ```bash
-npm test -- billing.test.ts
+curl -X POST http://127.0.0.1:3000/relay/publish \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clientId": "client_test_1",
+    "message": "This should fail"
+  }'
 ```
 
-### 4. Rate Limiting Testing
+### POST Test Invalid API Key
 
-**Test telemetry rate limits (100/min per device):**
 ```bash
-# Send rapid requests to trigger rate limit
-for i in {1..105}; do
-  curl -X POST http://localhost:3000/telemetry/ping \
-    -H "Content-Type: application/json" \
-    -d "{\"deviceId\": \"device_test_3\", \"eventId\": \"rate-test-$i\", \"metric\": \"temperature\", \"value\": 25, \"status\": \"ok\", \"ts\": \"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\"}" &
-done
-wait
+curl -X POST http://127.0.0.1:3000/relay/publish \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: invalid_key" \
+  -d '{
+    "clientId": "client_test_1",
+    "message": "This should fail"
+  }'
 ```
+
+## 5. Mock Provider Endpoints
+
+### POST Mock Payment
+
+```bash
+curl -X POST http://127.0.0.1:3000/mock-pay/charge \
+  -H "Content-Type: application/json" \
+  -d '{
+    "subscriptionId": "test-sub-123",
+    "planId": "basic",
+    "amount": 99.99
+  }'
+```
+
+### POST Mock Relay
+
+```bash
+curl -X POST http://127.0.0.1:3000/mock-relay/receive \
+  -H "Content-Type: application/json" \
+  -d '{
+    "idempotencyKey": "relay-key-123",
+    "message": "Test relay message",
+    "meta": {
+      "source": "test"
+    }
+  }'
+```
+
+## Usage Notes
+
+- All requests are targeted at `http://127.0.0.1:3000`
+- JSON payloads are formatted for readability with line breaks
+- Headers are specified using `-H` flag
+- POST data is specified using `-d` flag
+- Some endpoints expect specific behavior (failures, idempotency, etc.) as noted in the comments
 
 ## 📊 Data Models
 
 ### Device
+
 - Device information and activation status
 - Links to subscriptions and telemetry
 
-### TelemetryPing  
+### TelemetryPing
+
 - Sensor readings with idempotency
 - Timestamped metrics and status
 
 ### Subscription
+
 - Yearly plans with start/end dates
 - Payment provider references
 
 ### Client
+
 - API clients for relay system
 - API key authentication
 
 ### RelayLog
+
 - Message relay attempts and status
 - Retry logic with exponential backoff
 
 ## 🔍 Monitoring & Logging
 
 All requests include structured logging with:
+
 - Request IDs for tracing
 - Response times
 - Error details (without stack traces in production)
 - Business logic events
 
 Example log output:
+
 ```json
 {
   "level": "INFO",
@@ -418,45 +402,18 @@ CMD ["npm", "start"]
 ## 🔧 Configuration
 
 ### Rate Limits
+
 - Global: 1000 requests/minute
-- Telemetry: 100 requests/minute per device  
+- Telemetry: 100 requests/minute per device
 - Relay: 50 requests/minute per client
 
 ### Retry Policy
+
 - Max attempts: 3
 - Backoff: Exponential (1s, 2s, 4s)
 - Retry on: 5xx errors from providers
 
 ### Mock Failure Rates
+
 - Payment: 30% failure rate
 - Relay: 20% failure rate
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
----
-
-## 🎯 Assignment Notes
-
-This implementation demonstrates:
-
-- ✅ **Clean Architecture**: Layered structure with routes → controllers → services
-- ✅ **Production Practices**: Error handling, logging, rate limiting, health checks
-- ✅ **Idempotency**: Event IDs for telemetry, idempotency keys for relay
-- ✅ **Retry Logic**: Exponential backoff for failed relay messages
-- ✅ **Subscription Management**: Payment processing with device activation
-- ✅ **Background Processing**: Worker for retry attempts and subscription expiry
-- ✅ **Comprehensive Testing**: Unit tests covering key scenarios
-- ✅ **TypeScript**: Full type safety and modern practices
-- ✅ **Documentation**: Complete setup and usage guide
-
-**Time Investment**: ~16-18 hours as requested, focusing on production-ready code with proper error handling, logging, and testing.
