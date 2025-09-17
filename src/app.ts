@@ -1,5 +1,5 @@
 import Fastify, { FastifyInstance } from 'fastify'
-import { telemetryRoutes } from './modules/telemetry/telemetry.route'
+import { telemetryRoutes } from './routes/telemetry/telemetry.route'
 
 const server: FastifyInstance = Fastify({
     logger: true
