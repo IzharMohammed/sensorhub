@@ -55,4 +55,5 @@ const models = {
     errorResponseSchema,
 }
 
+//@ts-expect-error
 export const { schemas: telemetrySchemas, $ref } = buildJsonSchemas({ models });

@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { $ref } from "./telemetry.schema";
-import { createTelemetryPingHandler } from "./telemetry.controller";
+import { createTelemetryPingHandler, getDevicesStatusHandler } from "./telemetry.controller";
 
 export async function telemetryRoutes(server: FastifyInstance) {
 
@@ -19,6 +19,19 @@ export async function telemetryRoutes(server: FastifyInstance) {
             },
         },
         createTelemetryPingHandler
+    );
+
+    // GET /telemetry/devices/status
+    server.get(
+        "/devices/status",
+        {
+            schema: {
+                response: {
+                    200: $ref("deviceStatusResponseSchema"),
+                },
+            },
+        },
+        getDevicesStatusHandler
     );
 
 }
