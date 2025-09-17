@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { buildJsonSchemas } from "fastify-zod";
 
 // Zod schemas
 export const telemetryPingInputSchema = z.object({

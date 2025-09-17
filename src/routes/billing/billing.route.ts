@@ -8,12 +8,19 @@ async function billingRoutes(server: FastifyInstance) {
         "/subscribe",
         {
             schema: {
-                body: schemas.createSubscriptionSchema,
-                response: {
-                    201: schemas.subscriptionResponseSchema,
-                    402: schemas.errorResponseSchema,
-                    502: schemas.errorResponseSchema,
+                body: {
+                    content: {
+                        'application/json': {
+                            schema: { type: "object" }
+                        },
+                        // Other content types will not be validated
+                    }
                 },
+                // response: {
+                //     201: schemas.subscriptionResponseSchema,
+                //     402: schemas.errorResponseSchema,
+                //     502: schemas.errorResponseSchema,
+                // },
             },
         },
         createSubscriptionHandler

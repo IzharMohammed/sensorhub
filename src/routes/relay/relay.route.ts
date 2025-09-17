@@ -27,14 +27,21 @@ async function relayRoutes(server: FastifyInstance) {
         "/publish",
         {
             schema: {
-                body: schemas.createRelayPublishSchema,
-                response: {
-                    201: schemas.relayPublishResponseSchema,
-                    200: schemas.relayPublishResponseSchema,
-                    401: schemas.errorResponseSchema,
-                    403: schemas.errorResponseSchema,
-                    429: schemas.errorResponseSchema,
+                body: {
+                    content: {
+                        'application/json': {
+                            schema: { type: "object" }
+                        },
+                        // Other content types will not be validated
+                    }
                 },
+                // response: {
+                //     201: schemas.relayPublishResponseSchema,
+                //     200: schemas.relayPublishResponseSchema,
+                //     401: schemas.errorResponseSchema,
+                //     403: schemas.errorResponseSchema,
+                //     429: schemas.errorResponseSchema,
+                // },
             },
         },
         publishRelayMessageHandler

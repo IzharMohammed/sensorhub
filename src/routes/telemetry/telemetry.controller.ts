@@ -14,6 +14,7 @@ export async function createTelemetryPingHandler(
     reply: FastifyReply
 ) {
     const { eventId, deviceId, ...pingData } = request.body;
+    console.log("request.body", request.body);
 
     request.log.info({ deviceId, eventId }, "Processing telemetry ping");
 
@@ -31,6 +32,8 @@ export async function createTelemetryPingHandler(
 
         // Check if device is active and has valid subscription
         const deviceActive = await isDeviceActive(deviceId);
+        console.log(deviceActive);
+
         if (!deviceActive) {
             request.log.warn({ deviceId }, "Telemetry rejected for inactive device");
             return reply.code(403).send({
@@ -66,8 +69,12 @@ export async function getDevicesStatusHandler(
         const devicesStatus = await getDevicesStatus();
 
         request.log.info({ count: devicesStatus.length }, "Devices status retrieved");
+        console.log("devicesStatus", devicesStatus);
+        console.log("Response type:", typeof devicesStatus);             // should be "object"
+        console.log("Is array:", Array.isArray(devicesStatus));          // should be true
+        console.log("Stringified:", JSON.stringify(devicesStatus, null, 2)); // see actual data
 
-        return reply.code(200).send(devicesStatus);
+        return reply.code(200).type("application/json").send(devicesStatus);
     } catch (error) {
         request.log.error(error, "Failed to fetch devices status");
         throw error;
