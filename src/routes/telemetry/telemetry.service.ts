@@ -52,3 +52,26 @@ export async function createTelemetryPing(data: CreateTelemetryPingInput) {
 
     return result;
 }
+
+export async function getDevicesStatus() {
+    const devices = await prisma.device.findMany({
+        include: {
+            telemetryPings: {
+                orderBy: { createdAt: "desc" },
+                take: 10, // Get latest 10 metrics per device
+            },
+        },
+    });
+
+    return devices.map((device) => ({
+        deviceId: device.id,
+        isActive: device.isActive,
+        lastSeenAt: device.lastSeenAt?.toISOString() || null,
+        latestMetrics: device.telemetryPings.map((ping) => ({
+            metric: ping.metric,
+            value: ping.value,
+            status: ping.status,
+            ts: ping.ts.toISOString(),
+        })),
+    }));
+}
