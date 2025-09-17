@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   // output   = "../generated/prisma"
@@ -15,13 +9,12 @@ datasource db {
 }
 
 model Device {
-  id        String    @id @default(cuid())
-  deviceId  String    @unique
-  name      String?
-  isActive  Boolean   @default(true)
-  lastSeen  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  name       String
+  isActive   Boolean   @default(false)
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relations
   telemetryPings TelemetryPing[]
@@ -34,16 +27,16 @@ model TelemetryPing {
   id        String   @id @default(cuid())
   eventId   String   @unique // For idempotency
   deviceId  String
-  metric    String
+  metric    String // temperature, pressure, etc.
   value     Float
-  status    String
+  status    String // ok, warning, critical
   ts        DateTime
   createdAt DateTime @default(now())
 
   // Relations
-  device Device @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
-  @@index([deviceId, ts])
+  @@index([deviceId, createdAt])
   @@map("telemetry_pings")
 }
 
@@ -52,25 +45,23 @@ model Subscription {
   deviceId    String
   planId      String
   status      SubscriptionStatus @default(PENDING)
-  startDate   DateTime
-  endDate     DateTime
+  startDate   DateTime?
+  endDate     DateTime?
   providerRef String? // Reference from payment provider
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
   // Relations
-  device Device @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
   @@index([deviceId, status])
-  @@index([endDate]) // For expiry checks
   @@map("subscriptions")
 }
 
 model Client {
   id        String   @id @default(cuid())
-  clientId  String   @unique
+  name      String
   apiKey    String   @unique
-  name      String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -89,17 +80,17 @@ model RelayLog {
   meta           Json?
   status         RelayStatus @default(PENDING)
   attempts       Int         @default(0)
-  lastError      String?
+  maxAttempts    Int         @default(3)
   nextRetryAt    DateTime?
   completedAt    DateTime?
+  error          String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   // Relations
-  client Client @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([status, nextRetryAt])
-  @@index([clientId])
   @@map("relay_logs")
 }
 
@@ -107,7 +98,7 @@ enum SubscriptionStatus {
   PENDING
   ACTIVE
   EXPIRED
-  FAILED
+  CANCELLED
 }
 
 enum RelayStatus {
