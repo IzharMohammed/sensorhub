@@ -1,0 +1,56 @@
+import { FastifyReply, FastifyRequest } from "fastify";
+import { CreateTelemetryPingInput } from "./telemetry.schema";
+import {
+    createTelemetryPing,
+    getTelemetryPingByEventId,
+    isDeviceActive,
+} from "./telemetry.service";
+
+export async function createTelemetryPingHandler(
+    request: FastifyRequest<{
+        Body: CreateTelemetryPingInput;
+    }>,
+    reply: FastifyReply
+) {
+    const { eventId, deviceId, ...pingData } = request.body;
+
+    request.log.info({ deviceId, eventId }, "Processing telemetry ping");
+
+    try {
+        // Check for idempotency
+        const existingPing = await getTelemetryPingByEventId(eventId);
+        if (existingPing) {
+            request.log.info({ eventId }, "Duplicate ping detected, returning existing");
+            return reply.code(200).send({
+                ...request.body,
+                id: existingPing.id,
+                createdAt: existingPing.createdAt.toISOString(),
+            });
+        }
+
+        // Check if device is active and has valid subscription
+        const deviceActive = await isDeviceActive(deviceId);
+        if (!deviceActive) {
+            request.log.warn({ deviceId }, "Telemetry rejected for inactive device");
+            return reply.code(403).send({
+                error: "Device Inactive",
+                message: "Device does not have an active subscription",
+                requestId: request.id,
+            });
+        }
+
+        // Create the ping
+        const ping = await createTelemetryPing(request.body);
+
+        request.log.info({ deviceId, pingId: ping.id }, "Telemetry ping created");
+
+        return reply.code(201).send({
+            ...request.body,
+            id: ping.id,
+            createdAt: ping.createdAt.toISOString(),
+        });
+    } catch (error) {
+        request.log.error(error, "Failed to create telemetry ping");
+        throw error;
+    }
+}
